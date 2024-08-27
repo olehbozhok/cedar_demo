@@ -5,7 +5,7 @@ fn main() {
 	let policy = include_str!("../../cedar_files/demo_policy.cedar");
 
 	let result = check()
-		.principal_str("User::Bob_user_id_uuid\"")
+		.principal_str("User::\"Bob_user_id_uuid\"")
 		.action_str("Action::\"view\"")
 		.resource_str("Folder::\"public_folder_id_uuid\"")
 		.context_json_str("{}")
