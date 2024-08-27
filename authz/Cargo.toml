@@ -6,3 +6,5 @@ edition = "2021"
 [dependencies]
 serde_json = "1.0"
 cedar-policy = "3.2.0"
+thiserror = "1.0.63"
+bon = "2.0.0"
