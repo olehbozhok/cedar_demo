@@ -29,6 +29,7 @@ pub enum CheckError {
 /// Is used to check policy based on raw params.  
 /// Example of usage:
 /// ```
+/// use authz::check;
 /// let entities = include_str!("../../cedar_files/demo_entities.json");
 ///	let policy = include_str!("../../cedar_files/demo_policy.cedar");
 ///
@@ -40,6 +41,13 @@ pub enum CheckError {
 /// 		.policies_str(&policy)
 /// 		.entities_json_str(&entities)
 /// 		.call();
+/// match result {
+///		Ok(v) => {
+///			let decision = v.decision();
+///			println!("decision: {decision:#?}")
+///		}
+///		Err(err) => println!("ERR: {err}"),
+///	};
 /// ```
 #[builder]
 pub fn check(
@@ -70,4 +78,199 @@ pub fn check(
 	let authorizer = Authorizer::new();
 	let decision = authorizer.is_authorized(&request, &policy_set, &entities);
 	Ok(decision)
+}
+
+// test to check errors
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use cedar_policy::Decision;
+
+	// Reusable paths for entities and policy data.
+	const ENTITIES: &str = include_str!("../../cedar_files/demo_entities.json");
+	const POLICIES: &str = include_str!("../../cedar_files/demo_policy.cedar");
+
+	#[test]
+	fn test_valid_check() {
+		let response = check()
+			.principal_str("User::\"Bob_user_id_uuid\"")
+			.action_str("Action::\"view\"")
+			.resource_str("Folder::\"public_folder_id_uuid\"")
+			.context_json_str("{}")
+			.policies_str(POLICIES)
+			.entities_json_str(ENTITIES)
+			.call();
+
+		assert!(
+			response.is_ok(),
+			"Expected Ok(Response), got Err: {:?}",
+			response
+		);
+		if let Ok(response) = response {
+			assert_eq!(response.decision(), Decision::Allow);
+		}
+	}
+
+	#[test]
+	fn test_check_forbidden_action() {
+		let response = check()
+			.principal_str("User::\"Anna_user_id_uuid\"")
+			.action_str("Action::\"view\"")
+			.resource_str("Folder::\"private_folder_id_uuid\"")
+			.context_json_str("{}")
+			.policies_str(POLICIES)
+			.entities_json_str(ENTITIES)
+			.call();
+
+		assert!(
+			response.is_ok(),
+			"Expected Ok(Response), got Err: {:?}",
+			response
+		);
+		if let Ok(response) = response {
+			assert_eq!(response.decision(), Decision::Deny);
+		}
+	}
+
+	// Error case: Principal parsing error
+	#[test]
+	fn test_principal_parse_error() {
+		let response = check()
+			.principal_str("InvalidPrincipal")
+			.action_str("Action::\"view\"")
+			.resource_str("Folder::\"public_folder_id_uuid\"")
+			.context_json_str("{}")
+			.policies_str(POLICIES)
+			.entities_json_str(ENTITIES)
+			.call();
+
+		assert!(matches!(response, Err(CheckError::Principal(_))));
+	}
+
+	// Error case: Action parsing error
+	#[test]
+	fn test_action_parse_error() {
+		let response = check()
+			.principal_str("User::\"Bob_user_id_uuid\"")
+			.action_str("InvalidAction")
+			.resource_str("Folder::\"public_folder_id_uuid\"")
+			.context_json_str("{}")
+			.policies_str(POLICIES)
+			.entities_json_str(ENTITIES)
+			.call();
+
+		assert!(matches!(response, Err(CheckError::Action(_))));
+	}
+
+	// Error case: Resource parsing error
+	#[test]
+	fn test_resource_parse_error() {
+		let response = check()
+			.principal_str("User::\"Bob_user_id_uuid\"")
+			.action_str("Action::\"view\"")
+			.resource_str("InvalidResource")
+			.context_json_str("{}")
+			.policies_str(POLICIES)
+			.entities_json_str(ENTITIES)
+			.call();
+
+		assert!(matches!(response, Err(CheckError::Resource(_))));
+	}
+
+	// Error case: Context JSON parsing error
+	#[test]
+	fn test_context_json_parse_error() {
+		let response = check()
+			.principal_str("User::\"Bob_user_id_uuid\"")
+			.action_str("Action::\"view\"")
+			.resource_str("Folder::\"public_folder_id_uuid\"")
+			.context_json_str("{invalid_json}")
+			.policies_str(POLICIES)
+			.entities_json_str(ENTITIES)
+			.call();
+
+		assert!(matches!(response, Err(CheckError::ContextJsonParse(_))));
+	}
+
+	// TODO: fix this test after adding schema validation
+	// // Error case: Context creation error
+	// #[test]
+	// fn test_context_creation_error() {
+	// 	// Assuming a specific context that might fail
+	// 	let response = check()
+	// 		.principal_str("User::\"Bob_user_id_uuid\"")
+	// 		.action_str("Action::\"view\"")
+	// 		.resource_str("Folder::\"public_folder_id_uuid\"")
+	// 		.context_json_str("{\"key\": \"value\"}")
+	// 		.policies_str(POLICIES)
+	// 		.entities_json_str(ENTITIES)
+	// 		.call();
+	// 	match response {
+	// 		Err(CheckError::Context(_)) => {}
+	// 		v => assert!(
+	// 			false,
+	// 			"Expected Err(CheckError::Context(_)), but got {:?}",
+	// 			v
+	// 		),
+	// 	}
+	// }
+
+	// TODO: fix this test after adding schema validation
+	// // Error case: Request creation error
+	// #[test]
+	// fn test_request_creation_error() {
+	// 	// Here we use an intentionally malformed action string that should cause the request creation to fail
+	// 	let response = check()
+	// 		.principal_str("User::\"Bob_user_id_uuid\"") // This should be valid
+	// 		.action_str("Action::\"invalid_action!@#\"") // Intentionally malformed action to trigger error
+	// 		.resource_str("Folder::\"public_folder_id_uuid\"") // This should be valid
+	// 		.context_json_str("{}") // A simple valid context
+	// 		.policies_str(POLICIES)
+	// 		.entities_json_str(ENTITIES)
+	// 		.call();
+
+	// 	match response {
+	// 		Err(CheckError::Request(_err)) => {
+	// 			// Expected error occurred, test passes
+	// 		}
+	// 		v => {
+	// 			// If any other result, the test fails
+	// 			assert!(
+	// 				false,
+	// 				"Expected Err(CheckError::Request(_)), but got {:?}",
+	// 				v
+	// 			);
+	// 		}
+	// 	}
+	// }
+
+	// Error case: Policy set parsing error
+	#[test]
+	fn test_policy_set_parse_error() {
+		let response = check()
+			.principal_str("User::\"Bob_user_id_uuid\"")
+			.action_str("Action::\"view\"")
+			.resource_str("Folder::\"public_folder_id_uuid\"")
+			.context_json_str("{}")
+			.policies_str("invalid policy syntax")
+			.entities_json_str(ENTITIES)
+			.call();
+
+		assert!(matches!(response, Err(CheckError::PolicySet(_))));
+	}
+
+	// Error case: Entities parsing error
+	#[test]
+	fn test_entities_parse_error() {
+		let response = check()
+			.principal_str("User::\"Bob_user_id_uuid\"")
+			.action_str("Action::\"view\"")
+			.resource_str("Folder::\"public_folder_id_uuid\"")
+			.context_json_str("{}")
+			.policies_str(POLICIES)
+			.entities_json_str("invalid entities json")
+			.call();
+
+		assert!(matches!(response, Err(CheckError::Entities(_))));
+	}
 }
