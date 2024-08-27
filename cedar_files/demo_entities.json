@@ -1,0 +1,70 @@
+[
+    {
+        "uid": {
+            "type": "Folder",
+            "id": "public_folder_id_uuid"
+        },
+        "attrs": {
+            "accessLevel": "public",
+            "owner_user_id": "Bob_user_id_uuid"
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "Folder",
+            "id": "private_folder_id_uuid"
+        },
+        "attrs": {
+            "accessLevel": "private",
+            "owner_user_id": "Bob_user_id_uuid",
+            "shared_user_id_list": []
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "Folder",
+            "id": "location_public_folder_id_uuid"
+        },
+        "attrs": {
+            "accessLevel": "public",
+            "owner_user_id": "Bob_user_id_uuid",
+            "allowed_location": [
+                "USA",
+                "FRA"
+            ]
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "User",
+            "id": "Bob_user_id_uuid"
+        },
+        "attrs": {
+            "location": "USA"
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "User",
+            "id": "Anna_user_id_uuid"
+        },
+        "attrs": {
+            "location": "USA"
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "User",
+            "id": "Smith_user_id_uuid"
+        },
+        "attrs": {
+            "location": "FRA"
+        },
+        "parents": []
+    }
+]
