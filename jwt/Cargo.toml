@@ -1,12 +1,10 @@
 [package]
-name = "authz"
+name = "jwt"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+jsonwebtoken = "9.3.0"
 serde_json = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-jwt = { workspace = true }
-cedar-policy = "3.2.0"
-bon = "2.0.0"
