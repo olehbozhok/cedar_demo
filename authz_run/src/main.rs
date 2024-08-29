@@ -35,15 +35,12 @@ fn basic_case() {
 fn real_demo_case() -> Result<(), Box<dyn std::error::Error>> {
 	println!("start real_demo_case");
 
-	let entities = include_str!("../../cedar_files/demo_entities.json");
-	let policy = include_str!("../../cedar_files/demo_policy.cedar");
 	let input_json = include_str!("../../cedar_files/input.json");
 
 	let authz = Authz::new(AuthzConfig {
 		app_name: Some("Demo_App".to_owned()),
 		decoder: jwt::JWTDecoder::new_without_validation(),
-		default_entities_json: entities.to_owned(),
-		policies: policy.to_owned(),
+		policy: authz::PolicyStoreConfig::Local,
 	})?;
 
 	let v = authz.handle_raw_input(&input_json)?;

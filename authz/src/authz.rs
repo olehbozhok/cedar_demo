@@ -7,21 +7,51 @@ use jwt::JWTDecoder;
 mod jwt_data_handler;
 use jwt_data_handler::{AuthzInputEntitiesError, AuthzInputRaw, DecodeTokensError};
 pub(crate) mod jwt_tokens;
+mod policy_store;
+use policy_store::{PolicyStoreEntry, TrustedIssuers};
 
 use std::str::FromStr;
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[serde(tag = "strategy")]
+#[serde(rename_all = "kebab-case")]
+#[serde(rename_all_fields = "camelCase")]
+pub enum PolicyStoreConfig {
+	Local,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum GetPolicyError {
+	#[error("could not parse policy form json: {0}")]
+	ParseJson(#[from] serde_json::Error),
+}
+
+impl PolicyStoreConfig {
+	fn get_policy(self) -> Result<PolicyStoreEntry, GetPolicyError> {
+		match self {
+			Self::Local => Self::get_local_policy(),
+		}
+	}
+
+	fn get_local_policy() -> Result<PolicyStoreEntry, GetPolicyError> {
+		let policy_raw = include_str!("../../policy-store/local.json");
+		let policy: PolicyStoreEntry = serde_json::from_str(policy_raw)?;
+		Ok(policy)
+	}
+}
 
 pub struct Authz {
 	app_name: Option<String>,
 	jwt_dec: JWTDecoder,
 	policy: PolicySet,
-	//default entities for app
-	entities: Entities,
+	schema: cedar_policy::Schema,
+	trusted_issuers: TrustedIssuers,
 }
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuthzNewError {
-	#[error("could not parse policy set: {0}")]
-	PolicySet(ParseErrors),
+	#[error("could not get policy store: {0}")]
+	PolicyStore(#[from] GetPolicyError),
 	#[error("could not parse entities: {0}")]
 	Entities(#[from] EntitiesError),
 }
@@ -29,21 +59,19 @@ pub enum AuthzNewError {
 pub struct AuthzConfig {
 	pub app_name: Option<String>,
 	pub decoder: JWTDecoder,
-	pub policies: String,
-	pub default_entities_json: String,
+	pub policy: PolicyStoreConfig,
 }
 
 impl Authz {
 	pub fn new(config: AuthzConfig) -> Result<Authz, AuthzNewError> {
-		let policy_set =
-			PolicySet::from_str(config.policies.as_str()).map_err(AuthzNewError::PolicySet)?;
-		let entities = Entities::from_json_str(config.default_entities_json.as_str(), None)?;
+		let policy_store = config.policy.get_policy()?;
 
 		Ok(Authz {
 			app_name: config.app_name,
 			jwt_dec: config.decoder,
-			policy: policy_set,
-			entities,
+			policy: policy_store.policies,
+			schema: policy_store.schema,
+			trusted_issuers: policy_store.trusted_issuers,
 		})
 	}
 }
@@ -88,10 +116,7 @@ impl Authz {
 
 		let jwt_entities = decoded_input.jwt.entities(self.app_name.as_deref())?;
 
-		let entities = self
-			.entities
-			.clone()
-			.add_entities(jwt_entities.entities, None)?;
+		let entities = Entities::empty().add_entities(jwt_entities.entities, None)?;
 
 		let principal = jwt_entities.user_entity_uid;
 
