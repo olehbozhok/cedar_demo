@@ -14,6 +14,7 @@ pub enum EntityCreatingError {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[allow(dead_code)]
 pub struct IdToken {
 	pub jti: String,
 
@@ -192,6 +193,7 @@ impl UserInfoToken {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[allow(dead_code)]
 pub struct AccessToken {
 	pub jti: String,
 	pub iss: String,
