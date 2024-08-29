@@ -11,4 +11,3 @@ jwt = { workspace = true }
 base64 = { workspace = true }
 log = { workspace = true }
 cedar-policy = "3.2.0"
-bon = "2.0.0"
