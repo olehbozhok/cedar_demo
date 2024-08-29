@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 authz = { workspace = true }
+log = { workspace = true }
+simplelog = "0.12.2"
