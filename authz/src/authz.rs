@@ -4,8 +4,9 @@ use cedar_policy::{
 };
 use jwt::JWTDecoder;
 
-mod types;
-use types::{AuthzInputEntitiesError, AuthzInputRaw, DecodeTokensError};
+mod jwt_data_handler;
+use jwt_data_handler::{AuthzInputEntitiesError, AuthzInputRaw, DecodeTokensError};
+pub(crate) mod jwt_tokens;
 
 use std::str::FromStr;
 
@@ -70,7 +71,7 @@ pub enum HandleError {
 
 impl Authz {
 	pub fn handle_raw_input(&self, data: &str) -> Result<Response, HandleError> {
-		let input: types::AuthzInputRaw =
+		let input: jwt_data_handler::AuthzInputRaw =
 			serde_json::from_str(data).map_err(HandleError::InputJsonParse)?;
 
 		self.handle(input)
