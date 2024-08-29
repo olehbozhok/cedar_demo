@@ -14,6 +14,13 @@ pub struct AuthzInputRaw {
 	pub extra: CedarParams,
 }
 
+impl AuthzInputRaw {
+	pub fn parse_raw(data: &str) -> Result<Self, serde_json::error::Error> {
+		let input = serde_json::from_str(data)?;
+		Ok(input)
+	}
+}
+
 #[derive(serde::Deserialize, Debug)]
 pub struct CedarParams {
 	// extra parameters for cedar decision resolution

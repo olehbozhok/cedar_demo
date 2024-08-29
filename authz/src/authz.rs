@@ -5,7 +5,8 @@ use cedar_policy::{
 use jwt::JWTDecoder;
 
 mod jwt_data_handler;
-use jwt_data_handler::{AuthzInputEntitiesError, AuthzInputRaw, DecodeTokensError};
+pub use jwt_data_handler::AuthzInputRaw;
+use jwt_data_handler::{AuthzInputEntitiesError, DecodeTokensError, JWTData};
 pub(crate) mod jwt_tokens;
 mod policy_store;
 use policy_store::{PolicyStoreEntry, TrustedIssuers};
@@ -99,8 +100,8 @@ pub enum HandleError {
 
 impl Authz {
 	pub fn handle_raw_input(&self, data: &str) -> Result<Response, HandleError> {
-		let input: jwt_data_handler::AuthzInputRaw =
-			serde_json::from_str(data).map_err(HandleError::InputJsonParse)?;
+		let input = jwt_data_handler::AuthzInputRaw::parse_raw(data)
+			.map_err(HandleError::InputJsonParse)?;
 
 		self.handle(input)
 	}
@@ -112,13 +113,9 @@ impl Authz {
 		let resource = EntityUid::from_json(params.resource)
 			.map_err(|err| HandleError::Resource(err.to_string()))?;
 
-		// TODO: add entities from trust store about issuers (like in cedarling)
+		let entities_box = self.get_entities(decoded_input.jwt)?;
 
-		let jwt_entities = decoded_input.jwt.entities(self.app_name.as_deref())?;
-
-		let entities = Entities::empty().add_entities(jwt_entities.entities, None)?;
-
-		let principal = jwt_entities.user_entity_uid;
+		let principal = entities_box.user_entity_uid;
 
 		let context =
 			Context::from_json_value(params.context, None).map_err(HandleError::Context)?;
@@ -128,7 +125,24 @@ impl Authz {
 				.map_err(|err| HandleError::Request(err.to_string()))?;
 
 		let authorizer = Authorizer::new();
-		let decision = authorizer.is_authorized(&request, &self.policy, &entities);
+		let decision = authorizer.is_authorized(&request, &self.policy, &entities_box.entities);
 		Ok(decision)
 	}
+
+	pub fn get_entities(&self, data: JWTData) -> Result<EntitiesBox, HandleError> {
+		// TODO: add entities from trust store about issuers (like in cedarling)
+
+		let jwt_entities = data.entities(self.app_name.as_deref())?;
+
+		let entities = Entities::empty().add_entities(jwt_entities.entities, Some(&self.schema))?;
+		Ok(EntitiesBox {
+			entities: entities,
+			user_entity_uid: jwt_entities.user_entity_uid,
+		})
+	}
+}
+
+pub struct EntitiesBox {
+	pub entities: Entities,
+	pub user_entity_uid: EntityUid,
 }
