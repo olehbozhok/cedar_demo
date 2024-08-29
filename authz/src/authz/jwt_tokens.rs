@@ -8,7 +8,7 @@ use cedar_policy::RestrictedExpression;
 #[derive(thiserror::Error, Debug)]
 pub enum EntityCreatingError {
 	#[error("could not create entity uid from json: {0}")]
-	CreateFromJson(anyhow::Error),
+	CreateFromJson(String),
 	#[error("could not create new entity: {0}")]
 	NewEntity(#[from] EntityAttrEvaluationError),
 }
@@ -38,7 +38,7 @@ impl IdToken {
 	pub fn get_token_entity(self) -> Result<Entity, EntityCreatingError> {
 		let id = serde_json::json!({ "__entity": { "type": "IdToken", "id": self.jti } });
 		let uid = EntityUid::from_json(id)
-			.map_err(|err| EntityCreatingError::CreateFromJson(err.into()))?;
+			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
 
 		// TODO: develop this code after adding "trust store" (code from cedarling)
 		// let trust_store = unsafe {
@@ -149,7 +149,7 @@ impl UserInfoToken {
 		// self.sub
 		let id = serde_json::json!({ "__entity": { "type": identifier, "id": self.inum } });
 		let uid = EntityUid::from_json(id)
-			.map_err(|err| EntityCreatingError::CreateFromJson(err.into()))?;
+			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
 
 		// for demo we don`t use email field`
 		// // create email dict
@@ -213,7 +213,7 @@ impl AccessToken {
 	pub fn get_client_entity(&self) -> Result<Entity, EntityCreatingError> {
 		let id = serde_json::json!({ "__entity": { "type": "Client", "id": self.aud } });
 		let id = EntityUid::from_json(id)
-			.map_err(|err| EntityCreatingError::CreateFromJson(err.into()))?;
+			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
 
 		let parents = HashSet::new();
 		let attrs = HashMap::from([
@@ -237,7 +237,7 @@ impl AccessToken {
 	) -> Result<Entity, EntityCreatingError> {
 		let id = serde_json::json!({ "__entity": { "type": "Application", "id": self.aud } });
 		let id = EntityUid::from_json(id)
-			.map_err(|err| EntityCreatingError::CreateFromJson(err.into()))?;
+			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
 
 		let parents = HashSet::new();
 		let attrs = HashMap::from([

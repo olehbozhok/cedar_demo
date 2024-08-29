@@ -8,3 +8,5 @@ jwt = { path = "jwt" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0.63"
+base64 = "0.22.1"
+log = "0.4.22"
