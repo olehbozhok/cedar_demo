@@ -136,10 +136,16 @@ impl JWTData {
 			.get_client_entity()
 			.map_err(AuthzInputEntitiesError::AccessTokenEntity)?;
 
+		let access_token_entities = self
+			.access_token
+			.get_access_token_entities()
+			.map_err(AuthzInputEntitiesError::AccessTokenEntity)?;
+
 		let client_entity_uid = client_entity.uid();
 
 		let mut list = id_token_entities;
-		list.extend(vec![user_entity, client_entity]);
+		list.extend(access_token_entities);
+		// list.extend(vec![user_entity, client_entity]);
 
 		if let Option::Some(name) = application_name {
 			let application_entity = self

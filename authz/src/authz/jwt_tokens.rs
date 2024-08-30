@@ -243,25 +243,36 @@ impl UserInfoToken {
 }
 
 #[derive(serde::Deserialize, Debug)]
-#[allow(dead_code)]
+#[serde(rename_all = "camelCase")]
 pub struct AccessToken {
-	pub jti: String,
+	pub aud: String,
+	pub exp: i64,
+	pub iat: i64,
 	pub iss: String,
-
-	aud: String,
-	scope: HashSet<String>,
+	pub jti: String,
+	pub scope: Vec<String>,
+	#[serde(rename = "client_id")]
 	pub client_id: String,
+	// next fields don't used
+	// pub sub: String,
+	// pub code: String,
+	// pub iss: String,
+	// #[serde(rename = "token_type")]
+	// pub token_type: String,
 
-	exp: i64,
-	iat: i64,
-
-	#[serde(flatten)]
-	extra: HashMap<String, serde_json::Value>,
+	// pub acr: String,
+	// #[serde(rename = "x5t#S256")]
+	// pub x5t_s256: String,
+	// #[serde(rename = "auth_time")]
+	// pub auth_time: i64,
+	// pub iat: i64,
+	// pub username: String,
+	// pub status: Status,
 }
 
 impl AccessToken {
 	pub fn get_client_entity(&self) -> Result<Entity, EntityCreatingError> {
-		let id = serde_json::json!({ "__entity": { "type": "Client", "id": self.aud } });
+		let id = serde_json::json!({ "__entity": { "type": "Jans::Client", "id": self.aud } });
 		let id = EntityUid::from_json(id)
 			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
 
@@ -285,7 +296,7 @@ impl AccessToken {
 		application_name: &str,
 		client_uid: EntityUid,
 	) -> Result<Entity, EntityCreatingError> {
-		let id = serde_json::json!({ "__entity": { "type": "Application", "id": self.aud } });
+		let id = serde_json::json!({ "__entity": { "type": "Jans::Application", "id": self.aud } });
 		let id = EntityUid::from_json(id)
 			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
 
@@ -302,5 +313,44 @@ impl AccessToken {
 		]);
 
 		Ok(Entity::new(id, attrs, parents)?)
+	}
+
+	pub fn get_access_token_entities(&self) -> Result<Vec<Entity>, EntityCreatingError> {
+		let id =
+			serde_json::json!({ "__entity": { "type": "Jans::Access_token", "id": self.aud } });
+		let id = EntityUid::from_json(id)
+			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
+
+		let trusted_issuer_entity = exp_parsers::trusted_issuer_entity(&self.iss)?;
+
+		let parents = HashSet::new();
+		let attrs = HashMap::from([
+			(
+				"aud".to_owned(),
+				RestrictedExpression::new_string(self.aud.to_owned()),
+			),
+			("exp".to_owned(), RestrictedExpression::new_long(self.exp)),
+			("iat".to_owned(), RestrictedExpression::new_long(self.iat)),
+			(
+				"iss".to_owned(),
+				RestrictedExpression::new_entity_uid(trusted_issuer_entity.uid()),
+			),
+			(
+				"jti".to_owned(),
+				RestrictedExpression::new_string(self.jti.to_owned()),
+			),
+			("iat".to_owned(), RestrictedExpression::new_long(self.iat)),
+			(
+				"scope".to_owned(),
+				RestrictedExpression::new_set(
+					self.scope
+						.iter()
+						.map(|s| RestrictedExpression::new_string(s.to_owned())),
+				),
+			),
+		]);
+
+		let access_token_entity = Entity::new(id, attrs, parents)?;
+		Ok(vec![trusted_issuer_entity, access_token_entity])
 	}
 }
