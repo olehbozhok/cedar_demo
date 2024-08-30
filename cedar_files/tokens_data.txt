@@ -1,0 +1,103 @@
+//Access_token
+{
+  "sub": "boG8dfc5MKTn37o7gsdCeyqL8LpWQtgoO41m1KZwdq0",
+  "code": "155524c6-7f26-4392-b701-e0062b482669",
+  "iss": "https://admin-ui-test.gluu.org",
+  "token_type": "Bearer",
+  "client_id": "33d8c020-5c91-4fa6-8041-484eaae39926",
+  "aud": "33d8c020-5c91-4fa6-8041-484eaae39926",
+  "acr": "basic",
+  "x5t#S256": "",
+  "scope": [
+    "openid",
+    "profile"
+  ],
+  "auth_time": 1725018931,
+  "exp": 1725186982,
+  "iat": 1725018932,
+  "jti": "BvI3PibJS6KelAal2ztooA",
+  "username": "Default Admin User",
+  "status": {
+    "status_list": {
+      "idx": 2003,
+      "uri": "https://admin-ui-test.gluu.org/jans-auth/restv1/status_list"
+    }
+  }
+}
+__
+
+id_token
+
+{
+  "at_hash": "b5CKmXuPUtIQ1oUdSxbGPQ",
+  "sub": "boG8dfc5MKTn37o7gsdCeyqL8LpWQtgoO41m1KZwdq0",
+  "country": "HU",
+  "birthdate": "2000-01-01",
+  "user_name": "admin",
+  "amr": [
+    "10"
+  ],
+  "iss": "https://admin-ui-test.gluu.org",
+  "inum": "8d1cde6a-1447-4766-b3c8-16663e13b458",
+  "sid": "cb03dee7-b2a9-4ead-8287-e78aa5abb225",
+  "jansOpenIDConnectVersion": "openidconnect-1.0",
+  "acr": "basic",
+  "updated_at": 1725018902,
+  "auth_time": 1725018931,
+  "nickname": "Admin",
+  "exp": 1725022532,
+  "iat": 1725018932,
+  "jti": "kMGdhUl1Raqj9Yli4WK9XA",
+  "email": "admin@admin-ui-test.gluu.org",
+  "given_name": "Admin",
+  "middle_name": "Admin",
+  "nonce": "40fe7dd4-c9bf-4ae9-b1ad-96040b4ade10",
+  "aud": "33d8c020-5c91-4fa6-8041-484eaae39926",
+  "c_hash": "R1x9XZM3CAPSOC8-WF0FxA",
+  "name": "Default Admin User",
+  "user_permission": [
+    "CasaAdmin"
+  ],
+  "phone_number": "+917837679340",
+  "grant": "authorization_code",
+  "family_name": "User",
+  "status": {
+    "status_list": {
+      "idx": 2004,
+      "uri": "https://admin-ui-test.gluu.org/jans-auth/restv1/status_list"
+    }
+  },
+  "jansAdminUIRole": [
+    "api-admin"
+  ]
+}
+
+__
+
+Userinfo_token
+
+{
+  "country": "HU",
+  "sub": "boG8dfc5MKTn37o7gsdCeyqL8LpWQtgoO41m1KZwdq0",
+  "birthdate": "2000-01-01",
+  "user_name": "admin",
+  "iss": "https://admin-ui-test.gluu.org",
+  "given_name": "Admin",
+  "middle_name": "Admin",
+  "inum": "8d1cde6a-1447-4766-b3c8-16663e13b458",
+  "client_id": "33d8c020-5c91-4fa6-8041-484eaae39926",
+  "aud": "33d8c020-5c91-4fa6-8041-484eaae39926",
+  "updated_at": 1725018902,
+  "name": "Default Admin User",
+  "nickname": "Admin",
+  "user_permission": [
+    "CasaAdmin"
+  ],
+  "phone_number": "+917837679340",
+  "family_name": "User",
+  "jti": "SUgei1CKQjiWCzZyfecbDQ",
+  "email": "admin@admin-ui-test.gluu.org",
+  "jansAdminUIRole": [
+    "api-admin"
+  ]
+}

@@ -1,87 +1,137 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 use cedar_policy::Entity;
 use cedar_policy::EntityAttrEvaluationError;
 use cedar_policy::EntityUid;
 use cedar_policy::RestrictedExpression;
 
+use super::exp_parsers;
+
 #[derive(thiserror::Error, Debug)]
 pub enum EntityCreatingError {
 	#[error("could not create entity uid from json: {0}")]
 	CreateFromJson(String),
+	#[error("create expression with email: {0}")]
+	Email(#[from] exp_parsers::ParseEmailToExpError),
 	#[error("could not create new entity: {0}")]
 	NewEntity(#[from] EntityAttrEvaluationError),
+
+	#[error("could not create new entity of trusted issuer: {0}")]
+	TrustedIssuer(#[from] exp_parsers::TrustedIssuerEntityError),
 }
 
-#[derive(serde::Deserialize, Debug)]
-#[allow(dead_code)]
+#[derive(Default, Debug, Clone, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IdToken {
-	pub jti: String,
-
-	pub iss: String,
+	pub acr: String,
+	pub amr: Vec<String>,
 	pub aud: String,
-	pub sub: String,
-
-	pub iat: i64,
+	pub birthdate: String,
+	pub email: String,
 	pub exp: i64,
+	pub iat: i64,
+	pub iss: String,
+	pub jti: String,
+	pub name: String,
+	#[serde(rename = "phone_number")]
+	pub phone_number: String,
+	pub sub: String,
+	// next fields is unused for now
+	// #[serde(rename = "at_hash")]
+	// pub at_hash: String,
+	// pub country: String,
 
-	pub acr: Option<String>,
-	pub azp: Option<String>,
-	#[serde(default)]
-	pub amr: BTreeSet<String>,
+	// #[serde(rename = "user_name")]
+	// pub user_name: String,
 
-	#[serde(flatten)]
-	extra: HashMap<String, serde_json::Value>,
+	// pub inum: String,
+	// pub sid: String,
+	// #[serde(rename = "jansOpenIDConnectVersion")]
+	// pub jans_open_idconnect_version: String,
+
+	// #[serde(rename = "updated_at")]
+	// pub updated_at: i64,
+	// #[serde(rename = "auth_time")]
+	// pub auth_time: i64,
+	// pub nickname: String,
+
+	// #[serde(rename = "given_name")]
+	// pub given_name: String,
+	// #[serde(rename = "middle_name")]
+	// pub middle_name: String,
+	// pub nonce: String,
+
+	// #[serde(rename = "c_hash")]
+	// pub c_hash: String,
+	// #[serde(rename = "user_permission")]
+	// pub user_permission: Vec<String>,
+
+	// pub grant: String,
+	// #[serde(rename = "family_name")]
+	// pub family_name: String,
+	// pub status: Status,
+	// #[serde(rename = "jansAdminUIRole")]
+	// pub jans_admin_uirole: Vec<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Status {
+	#[serde(rename = "status_list")]
+	pub status_list: StatusList,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StatusList {
+	pub idx: i64,
+	pub uri: String,
 }
 
 impl IdToken {
-	pub fn get_token_entity(self) -> Result<Entity, EntityCreatingError> {
-		let id = serde_json::json!({ "__entity": { "type": "IdToken", "id": self.jti } });
+	pub fn get_token_entities(self) -> Result<Vec<Entity>, EntityCreatingError> {
+		let id = serde_json::json!({ "__entity": { "type": "Jans::id_token", "id": self.jti } });
 		let uid = EntityUid::from_json(id)
 			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
-
-		// TODO: develop this code after adding "trust store" (code from cedarling)
-		// let trust_store = unsafe {
-		// 	crypto::TRUST_STORE
-		// 		.get()
-		// 		.expect_throw("TRUST_STORE not initialized")
-		// };
-		// let entry = trust_store
-		// 	.get(&self.iss)
-		// 	.expect_throw("Unable to extract TrustedIssuer from UserInfo iss");
-		// let issuer = entry.issuer.get_entity();
 
 		let amr = self
 			.amr
 			.iter()
 			.map(|v| RestrictedExpression::new_string(v.to_owned()));
 
+		// TODO: add
+		//         iss: TrustedIssuer,
+
 		let mut attrs = HashMap::from([
-			(
-				"jti".into(),
-				RestrictedExpression::new_string(self.jti.clone()),
-			),
-			// (
-			// 	"iss".into(),
-			// 	RestrictedExpression::new_entity_uid(issuer.uid()),
-			// ),
-			("aud".into(), RestrictedExpression::new_string(self.aud)),
-			("sub".into(), RestrictedExpression::new_string(self.sub)),
-			("iat".into(), RestrictedExpression::new_long(self.iat)),
-			("exp".into(), RestrictedExpression::new_long(self.exp)),
+			("acr".into(), RestrictedExpression::new_string(self.acr)),
 			("amr".into(), RestrictedExpression::new_set(amr)),
+			("aud".into(), RestrictedExpression::new_string(self.aud)),
+			(
+				"birthdate".into(),
+				RestrictedExpression::new_string(self.birthdate),
+			),
+			("email".into(), exp_parsers::email_exp(&self.email)?),
+			("exp".into(), RestrictedExpression::new_long(self.exp)),
+			("iat".into(), RestrictedExpression::new_long(self.iat)),
+			("jti".into(), RestrictedExpression::new_string(self.jti)),
+			("name".into(), RestrictedExpression::new_string(self.name)),
+			(
+				"phone_number".into(),
+				RestrictedExpression::new_string(self.phone_number),
+			),
+			("sub".into(), RestrictedExpression::new_string(self.sub)),
 		]);
 
-		// optional member
-		if let Some(azp) = self.azp {
-			let _ = attrs.insert("azp".into(), RestrictedExpression::new_string(azp));
-		}
+		let trusted_issuer_entity = exp_parsers::trusted_issuer_entity(&self.iss)?;
 
-		if let Some(acr) = self.acr {
-			let _ = attrs.insert("acr".into(), RestrictedExpression::new_string(acr));
-		}
+		attrs.insert(
+			"iss".into(),
+			RestrictedExpression::new_entity_uid(trusted_issuer_entity.uid()),
+		);
 
-		Ok(Entity::new(uid, attrs, HashSet::with_capacity(0))?)
+		let id_token_entity = Entity::new(uid, attrs, HashSet::with_capacity(0))?;
+		let result = vec![id_token_entity, trusted_issuer_entity];
+		Ok(result)
 	}
 }
 

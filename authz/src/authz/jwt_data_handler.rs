@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use cedar_policy::Entity;
 use cedar_policy::EntityUid;
 
@@ -117,9 +119,9 @@ impl JWTData {
 		// 	throw_str("userinfo token invalid: either sub or iss doesn't match id_token")
 		// }
 
-		let id_token_entity = self
+		let id_token_entities = self
 			.id_token
-			.get_token_entity()
+			.get_token_entities()
 			.map_err(AuthzInputEntitiesError::IdTokenEntity)?;
 
 		let user_entity = self
@@ -136,7 +138,8 @@ impl JWTData {
 
 		let client_entity_uid = client_entity.uid();
 
-		let mut list = vec![id_token_entity, user_entity, client_entity];
+		let mut list = id_token_entities;
+		list.extend(vec![user_entity, client_entity]);
 
 		if let Option::Some(name) = application_name {
 			let application_entity = self
@@ -147,8 +150,15 @@ impl JWTData {
 		}
 
 		Ok(JWTDataEntities {
-			entities: list,
+			entities: deduplicate_entities(list),
 			user_entity_uid,
 		})
 	}
+}
+
+fn deduplicate_entities(list: Vec<Entity>) -> Vec<Entity> {
+	BTreeMap::from_iter(list.into_iter().map(|e| (e.uid(), e)))
+		.into_iter()
+		.map(|(_k, v)| v)
+		.collect()
 }
