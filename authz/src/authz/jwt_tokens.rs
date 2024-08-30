@@ -130,7 +130,7 @@ impl IdToken {
 		);
 
 		let id_token_entity = Entity::new(uid, attrs, HashSet::with_capacity(0))?;
-		let result = vec![id_token_entity, trusted_issuer_entity];
+		let result = vec![id_token_entity];
 		Ok(result)
 	}
 }
@@ -266,7 +266,7 @@ impl UserInfoToken {
 
 		let token_entity = Entity::new(uid, attrs, parents)?;
 
-		Ok(vec![trusted_issuer_entity, token_entity])
+		Ok(vec![token_entity])
 	}
 
 	fn get_user_entities(
@@ -383,16 +383,12 @@ impl AccessToken {
 				"iss".to_string(),
 				RestrictedExpression::new_entity_uid(trusted_issuer_entity.uid()),
 			),
-			(
-				"iss".to_string(),
-				RestrictedExpression::new_entity_uid(trusted_issuer_entity.uid()),
-			),
 		]);
 
 		let client_entity = Entity::new(id, attrs, parents)?;
 		Ok(AccessTokenEntityBox {
 			client_entry_uid: client_entity.uid(),
-			entities: vec![trusted_issuer_entity, client_entity],
+			entities: vec![client_entity],
 		})
 	}
 
@@ -456,6 +452,6 @@ impl AccessToken {
 		]);
 
 		let access_token_entity = Entity::new(id, attrs, parents)?;
-		Ok(vec![trusted_issuer_entity, access_token_entity])
+		Ok(vec![access_token_entity])
 	}
 }
