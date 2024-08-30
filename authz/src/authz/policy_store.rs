@@ -20,12 +20,21 @@ where
 	D: serde::Deserializer<'de>,
 {
 	let source = <String as serde::Deserialize>::deserialize(deserializer)?;
-	let decoded = BASE64_STANDARD.decode(source).map_err(|err| {
-		serde::de::Error::custom(format!(
-			"unable to parse Schema source as valid base64: {}",
-			err.to_string()
-		))
-	})?;
+	let decoded_result: Result<Vec<u8>, D::Error> =
+		BASE64_STANDARD.decode(source.as_str()).map_err(|err| {
+			serde::de::Error::custom(format!(
+				"unable to parse Schema source as valid base64: {}, data: {}",
+				err.to_string(),
+				&source,
+			))
+		});
+	let decoded = match decoded_result {
+		Ok(v) => v,
+		//if we failed try to decode with NO_PAD
+		Err(origin_err) => BASE64_STANDARD_NO_PAD
+			.decode(source.as_str())
+			.map_err(|_err| origin_err)?,
+	};
 
 	let (schema, warnings) = cedar_policy::Schema::from_cedarschema_file(decoded.as_slice())
 		.map_err(|err| {
