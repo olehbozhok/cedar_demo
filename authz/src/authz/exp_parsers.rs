@@ -1,5 +1,10 @@
-use cedar_policy::{Entity, EntityAttrEvaluationError, EntityUid, RestrictedExpression};
-use std::collections::{HashMap, HashSet};
+use cedar_policy::{
+	Entity, EntityAttrEvaluationError, EntityId, EntityTypeName, EntityUid, RestrictedExpression,
+};
+use std::{
+	collections::{HashMap, HashSet},
+	str::FromStr,
+};
 
 #[derive(thiserror::Error, Debug)]
 
@@ -96,4 +101,17 @@ pub fn trusted_issuer_entity(url_raw: &str) -> Result<Entity, TrustedIssuerEntit
 	let entity = Entity::new(uid, attrs, HashSet::with_capacity(0))?;
 
 	Ok(entity)
+}
+
+pub fn roles_entities(roles: &[String]) -> Vec<Entity> {
+	roles
+		.into_iter()
+		.map(|role| {
+			Entity::with_uid(EntityUid::from_type_name_and_id(
+				// it should newer panic
+				EntityTypeName::from_str("Jans::Role").unwrap(),
+				EntityId::new(role),
+			))
+		})
+		.collect()
 }

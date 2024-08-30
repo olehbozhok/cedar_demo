@@ -89,7 +89,7 @@ pub struct StatusList {
 }
 
 impl IdToken {
-	pub fn get_token_entities(self) -> Result<Vec<Entity>, EntityCreatingError> {
+	pub fn entities(self) -> Result<Vec<Entity>, EntityCreatingError> {
 		let id = serde_json::json!({ "__entity": { "type": "Jans::id_token", "id": self.jti } });
 		let uid = EntityUid::from_json(id)
 			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
@@ -137,19 +137,37 @@ impl IdToken {
 
 #[derive(serde::Deserialize, Debug)]
 pub struct UserInfoToken {
-	pub jti: String,
-	pub iss: String,
-
-	pub sub: String,
 	pub aud: String,
+	pub birthdate: String,
+	pub email: String,
+	pub iss: String,
+	pub jti: String,
+	pub name: String,
+	#[serde(rename = "phone_number")]
+	pub phone_number: String,
+	pub sub: String,
+	// id of user
+	pub inum: String,
+	// next fields is unused
+	// pub country: String,
+	// #[serde(rename = "user_name")]
+	// pub user_name: String,
+	// #[serde(rename = "given_name")]
+	// pub given_name: String,
+	// #[serde(rename = "middle_name")]
+	// pub middle_name: String,
 
-	// it is not exist in demo token
-	// pub exp: i64,
-	// pub iat: i64,
-	pub inum: String, // represent  user-id
-
-	#[serde(flatten)]
-	extra: HashMap<String, serde_json::Value>,
+	// #[serde(rename = "client_id")]
+	// pub client_id: String,
+	// #[serde(rename = "updated_at")]
+	// pub updated_at: i64,
+	// pub nickname: String,
+	// #[serde(rename = "user_permission")]
+	// pub user_permission: Vec<String>,
+	// #[serde(rename = "family_name")]
+	// pub family_name: String,
+	// #[serde(rename = "jansAdminUIRole")]
+	// pub jans_admin_uirole: Vec<String>,
 }
 
 // Restricted expressions can contain only the following:
@@ -159,6 +177,8 @@ pub struct UserInfoToken {
 //       on this list
 //   - set and record literals, where the values must be other things on
 //       this list
+#[allow(dead_code)]
+//it can be usefull to dynamically fill the entities data from token
 fn json_to_expression(value: serde_json::Value) -> Option<RestrictedExpression> {
 	match value {
 		serde_json::Value::Null => None,
@@ -182,63 +202,118 @@ fn json_to_expression(value: serde_json::Value) -> Option<RestrictedExpression> 
 	}
 }
 
+pub(crate) struct UserInfoTokenEntityBox {
+	pub entities: Vec<Entity>,
+	pub user_entry_uid: EntityUid,
+}
+
+pub(crate) struct UserMissedInfo<'a> {
+	pub username: String,
+	pub roles: &'a [String],
+}
+
 impl UserInfoToken {
-	pub fn get_user_entity(self, roles: &[Entity]) -> Result<Entity, EntityCreatingError> {
-		// TODO: implemplement acfter adding trust sstore (code from cedarling)
-		// let trust_store = unsafe { crypto::TRUST_STORE.get().expect_throw("TRUST_STORE not initialized") };
-		// let entry = trust_store.get(&self.iss).expect_throw("Unable to extract TrustedIssuer from UserInfo iss");
+	pub(crate) fn entities(
+		&self,
+		user_info: UserMissedInfo,
+	) -> Result<UserInfoTokenEntityBox, EntityCreatingError> {
+		let mut entry_box = self.get_user_entities(user_info)?;
+		entry_box
+			.entities
+			.extend(self.get_user_info_tokens_entity()?);
+		Ok(entry_box)
+	}
 
-		// let identifier = entry
-		// 	.issuer
-		// 	.id_tokens
-		// 	.principal_identifier
-		// 	.as_deref()
-		// 	.unwrap_or("User");
-
-		let identifier = "User";
-		// self.sub
-		let id = serde_json::json!({ "__entity": { "type": identifier, "id": self.inum } });
+	fn get_user_info_tokens_entity(&self) -> Result<Vec<Entity>, EntityCreatingError> {
+		let id = serde_json::json!({ "__entity": { "type": "Jans::Userinfo_token", "id": self.jti.to_owned() } });
 		let uid = EntityUid::from_json(id)
 			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
 
-		// for demo we don`t use email field`
-		// // create email dict
-		// let mut iter = self.email.split('@');
-		// let record = [
-		// 	(
-		// 		"id".to_string(),
-		// 		RestrictedExpression::new_string(
-		// 			iter.next().expect_throw("Invalid Email Address").into(),
-		// 		),
-		// 	),
-		// 	(
-		// 		"domain".to_string(),
-		// 		RestrictedExpression::new_string(
-		// 			iter.next().expect_throw("Invalid Email Address").into(),
-		// 		),
-		// 	),
-		// ];
+		let trusted_issuer_entity = exp_parsers::trusted_issuer_entity(&self.iss)?;
 
-		// construct entity
-		let mut attrs = HashMap::from([
+		let parents = HashSet::new();
+		let attrs = HashMap::from([
+			(
+				"aud".to_owned(),
+				RestrictedExpression::new_string(self.aud.clone()),
+			),
+			(
+				"birthdate".to_string(),
+				RestrictedExpression::new_string(self.birthdate.clone()),
+			),
+			("email".to_string(), exp_parsers::email_exp(&self.email)?),
+			(
+				"iss".to_string(),
+				RestrictedExpression::new_entity_uid(trusted_issuer_entity.uid()),
+			),
+			(
+				"jti".to_string(),
+				RestrictedExpression::new_string(self.jti.clone()),
+			),
+			(
+				"name".to_string(),
+				RestrictedExpression::new_string(self.name.clone()),
+			),
+			(
+				"phone_number".to_string(),
+				RestrictedExpression::new_string(self.phone_number.clone()),
+			),
 			(
 				"sub".to_string(),
 				RestrictedExpression::new_string(self.sub.clone()),
 			),
-			// (
-			// 	"email".to_string(),
-			// 	RestrictedExpression::new_record(record).unwrap_throw(),
-			// ),
 		]);
 
-		self.extra.into_iter().for_each(|(k, v)| {
-			if let Option::Some(exp) = json_to_expression(v) {
-				attrs.insert(k.to_owned(), exp);
-			}
-		});
+		let token_entity = Entity::new(uid, attrs, parents)?;
 
-		let parents = HashSet::from_iter(roles.iter().map(|e| e.uid()));
-		Ok(Entity::new(uid, attrs, parents)?)
+		Ok(vec![trusted_issuer_entity, token_entity])
+	}
+
+	fn get_user_entities(
+		&self,
+		user_info: UserMissedInfo,
+	) -> Result<UserInfoTokenEntityBox, EntityCreatingError> {
+		let id = serde_json::json!({ "__entity": { "type": "Jans::User", "id": self.sub } });
+		let uid = EntityUid::from_json(id)
+			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
+
+		let attrs = HashMap::from([
+			(
+				"sub".to_string(),
+				RestrictedExpression::new_string(self.sub.clone()),
+			),
+			(
+				"username".to_string(),
+				RestrictedExpression::new_string(user_info.username),
+			),
+			("email".to_string(), exp_parsers::email_exp(&self.email)?),
+			(
+				"phone_number".to_string(),
+				RestrictedExpression::new_string(self.phone_number.clone()),
+			),
+			(
+				"role".to_string(),
+				RestrictedExpression::new_set(
+					user_info
+						.roles
+						.iter()
+						.map(|r| RestrictedExpression::new_string(r.to_owned())),
+				),
+			),
+		]);
+
+		let roles_entities = exp_parsers::roles_entities(user_info.roles);
+
+		let parents = HashSet::from_iter(roles_entities.iter().map(|e| e.uid()));
+		let user_entity = Entity::new(uid, attrs, parents)?;
+		let user_entry_uid = user_entity.uid();
+
+		let mut entities = roles_entities;
+		entities.push(user_entity);
+		Ok(UserInfoTokenEntityBox {
+			entities: entities,
+			user_entry_uid,
+		})
 	}
 }
 
@@ -253,28 +328,50 @@ pub struct AccessToken {
 	pub scope: Vec<String>,
 	#[serde(rename = "client_id")]
 	pub client_id: String,
+	pub username: String,
 	// next fields don't used
 	// pub sub: String,
 	// pub code: String,
-	// pub iss: String,
 	// #[serde(rename = "token_type")]
 	// pub token_type: String,
-
 	// pub acr: String,
 	// #[serde(rename = "x5t#S256")]
 	// pub x5t_s256: String,
 	// #[serde(rename = "auth_time")]
 	// pub auth_time: i64,
-	// pub iat: i64,
-	// pub username: String,
 	// pub status: Status,
 }
 
+pub struct AccessTokenEntityBox {
+	pub entities: Vec<Entity>,
+	pub client_entry_uid: EntityUid,
+}
+
 impl AccessToken {
-	pub fn get_client_entity(&self) -> Result<Entity, EntityCreatingError> {
+	pub(crate) fn entities(
+		&self,
+		application_name: Option<&str>,
+	) -> Result<Vec<Entity>, EntityCreatingError> {
+		let mut box_entries = self.get_client_entity()?;
+		box_entries
+			.entities
+			.extend(self.get_access_token_entities()?);
+
+		if let Option::Some(name) = application_name {
+			box_entries
+				.entities
+				.push(self.get_application_entity(name, box_entries.client_entry_uid)?);
+		}
+
+		Ok(box_entries.entities)
+	}
+
+	fn get_client_entity(&self) -> Result<AccessTokenEntityBox, EntityCreatingError> {
 		let id = serde_json::json!({ "__entity": { "type": "Jans::Client", "id": self.aud } });
 		let id = EntityUid::from_json(id)
 			.map_err(|err| EntityCreatingError::CreateFromJson(err.to_string()))?;
+
+		let trusted_issuer_entity = exp_parsers::trusted_issuer_entity(&self.iss)?;
 
 		let parents = HashSet::new();
 		let attrs = HashMap::from([
@@ -284,14 +381,22 @@ impl AccessToken {
 			),
 			(
 				"iss".to_string(),
-				RestrictedExpression::new_string(self.iss.clone()),
+				RestrictedExpression::new_entity_uid(trusted_issuer_entity.uid()),
+			),
+			(
+				"iss".to_string(),
+				RestrictedExpression::new_entity_uid(trusted_issuer_entity.uid()),
 			),
 		]);
 
-		Ok(Entity::new(id, attrs, parents)?)
+		let client_entity = Entity::new(id, attrs, parents)?;
+		Ok(AccessTokenEntityBox {
+			client_entry_uid: client_entity.uid(),
+			entities: vec![trusted_issuer_entity, client_entity],
+		})
 	}
 
-	pub fn get_application_entity(
+	fn get_application_entity(
 		&self,
 		application_name: &str,
 		client_uid: EntityUid,
@@ -315,7 +420,7 @@ impl AccessToken {
 		Ok(Entity::new(id, attrs, parents)?)
 	}
 
-	pub fn get_access_token_entities(&self) -> Result<Vec<Entity>, EntityCreatingError> {
+	fn get_access_token_entities(&self) -> Result<Vec<Entity>, EntityCreatingError> {
 		let id =
 			serde_json::json!({ "__entity": { "type": "Jans::Access_token", "id": self.aud } });
 		let id = EntityUid::from_json(id)

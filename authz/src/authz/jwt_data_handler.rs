@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use cedar_policy::Entity;
 use cedar_policy::EntityUid;
 
-use super::jwt_tokens::{AccessToken, EntityCreatingError, IdToken, UserInfoToken};
+use super::jwt_tokens::{AccessToken, EntityCreatingError, IdToken, UserInfoToken, UserMissedInfo};
 
 #[derive(serde::Deserialize, Debug)]
 pub struct AuthzInputRaw {
@@ -88,6 +88,8 @@ pub enum AuthzInputEntitiesError {
 
 	#[error("could not get user entity from userinfo_token: {0}")]
 	UserEntity(EntityCreatingError),
+	#[error("could not get user token entity from userinfo_token: {0}")]
+	UserTokenEntity(EntityCreatingError),
 
 	#[error("could not get access token entity from access_token: {0}")]
 	AccessTokenEntity(EntityCreatingError),
@@ -121,48 +123,38 @@ impl JWTData {
 
 		let id_token_entities = self
 			.id_token
-			.get_token_entities()
+			.entities()
 			.map_err(AuthzInputEntitiesError::IdTokenEntity)?;
 
-		let user_entity = self
+		let user_info_entities = self
 			.userinfo_token
-			.get_user_entity(&[])
-			.map_err(AuthzInputEntitiesError::UserEntity)?;
-
-		let user_entity_uid = user_entity.uid();
-
-		let client_entity = self
-			.access_token
-			.get_client_entity()
-			.map_err(AuthzInputEntitiesError::AccessTokenEntity)?;
+			.entities(UserMissedInfo {
+				roles: &[], //TODO: add roles after adding to jwts
+				// according to doc
+				// User: Created based on the joined id_token and userinfo token. sub is the entity identifier
+				// but username only has in access_token
+				username: self.access_token.username.clone(),
+			})
+			.map_err(AuthzInputEntitiesError::UserTokenEntity)?;
 
 		let access_token_entities = self
 			.access_token
-			.get_access_token_entities()
+			.entities(application_name)
 			.map_err(AuthzInputEntitiesError::AccessTokenEntity)?;
 
-		let client_entity_uid = client_entity.uid();
-
 		let mut list = id_token_entities;
+		list.extend(user_info_entities.entities);
 		list.extend(access_token_entities);
-		// list.extend(vec![user_entity, client_entity]);
-
-		if let Option::Some(name) = application_name {
-			let application_entity = self
-				.access_token
-				.get_application_entity(name, client_entity_uid)
-				.map_err(AuthzInputEntitiesError::ApplicationEntity)?;
-			list.push(application_entity)
-		}
 
 		Ok(JWTDataEntities {
 			entities: deduplicate_entities(list),
-			user_entity_uid,
+			user_entity_uid: user_info_entities.user_entry_uid,
 		})
 	}
 }
 
 fn deduplicate_entities(list: Vec<Entity>) -> Vec<Entity> {
+	// use Btree to not implement hash
 	BTreeMap::from_iter(list.into_iter().map(|e| (e.uid(), e)))
 		.into_iter()
 		.map(|(_k, v)| v)
