@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use authz::{jwt, Authz, AuthzConfig};
 use simplelog::*;
 
@@ -27,8 +29,13 @@ fn real_demo_case() -> Result<(), Box<dyn std::error::Error>> {
 		let decoded_input = q.decode_tokens(&jwt::JWTDecoder::new_without_validation())?;
 		let entites_box = authz.get_entities(decoded_input.jwt)?;
 
-		if let Err(e) = entites_box.entities.write_to_json(std::io::stdout()) {
+		let stdout = std::io::stdout();
+		let mut handle = stdout.lock();
+
+		if let Err(e) = entites_box.entities.write_to_json(&mut handle) {
 			eprintln!("Error writing to JSON: {:?}", e);
+		} else {
+			let _ = handle.write("\n".as_bytes());
 		}
 	}
 
