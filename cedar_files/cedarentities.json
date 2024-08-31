@@ -1,0 +1,130 @@
+[
+    {
+        "uid": {
+            "type": "Jans::id_token",
+            "id": "kMGdhUl1Raqj9Yli4WK9XA"
+        },
+        "attrs": {
+            "exp": 1725022532,
+            "acr": "basic",
+            "iat": 1725018932,
+            "amr": [
+                "10"
+            ],
+            "birthdate": "2000-01-01",
+            "aud": "33d8c020-5c91-4fa6-8041-484eaae39926",
+            "email": {
+                "domain": "admin-ui-test.gluu.org",
+                "id": "admin"
+            },
+            "iss": {
+                "__entity": {
+                    "type": "Jans::TrustedIssuer",
+                    "id": "https://admin-ui-test.gluu.org"
+                }
+            },
+            "phone_number": "+917837679340",
+            "sub": "boG8dfc5MKTn37o7gsdCeyqL8LpWQtgoO41m1KZwdq0",
+            "jti": "kMGdhUl1Raqj9Yli4WK9XA",
+            "name": "Default Admin User"
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "Jans::Access_token",
+            "id": "33d8c020-5c91-4fa6-8041-484eaae39926"
+        },
+        "attrs": {
+            "iat": 1725018932,
+            "iss": {
+                "__entity": {
+                    "type": "Jans::TrustedIssuer",
+                    "id": "https://admin-ui-test.gluu.org"
+                }
+            },
+            "jti": "BvI3PibJS6KelAal2ztooA",
+            "scope": [
+                "openid",
+                "profile"
+            ],
+            "exp": 1725186982,
+            "aud": "33d8c020-5c91-4fa6-8041-484eaae39926"
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "Jans::Application",
+            "id": "33d8c020-5c91-4fa6-8041-484eaae39926"
+        },
+        "attrs": {
+            "client": {
+                "__entity": {
+                    "type": "Jans::Client",
+                    "id": "33d8c020-5c91-4fa6-8041-484eaae39926"
+                }
+            },
+            "name": "Demo_App"
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "Jans::Client",
+            "id": "33d8c020-5c91-4fa6-8041-484eaae39926"
+        },
+        "attrs": {
+            "client_id": "33d8c020-5c91-4fa6-8041-484eaae39926",
+            "iss": {
+                "__entity": {
+                    "type": "Jans::TrustedIssuer",
+                    "id": "https://admin-ui-test.gluu.org"
+                }
+            }
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "Jans::User",
+            "id": "boG8dfc5MKTn37o7gsdCeyqL8LpWQtgoO41m1KZwdq0"
+        },
+        "attrs": {
+            "phone_number": "+917837679340",
+            "username": "Default Admin User",
+            "email": {
+                "domain": "admin-ui-test.gluu.org",
+                "id": "admin"
+            },
+            "role": [],
+            "sub": "boG8dfc5MKTn37o7gsdCeyqL8LpWQtgoO41m1KZwdq0"
+        },
+        "parents": []
+    },
+    {
+        "uid": {
+            "type": "Jans::Userinfo_token",
+            "id": "SUgei1CKQjiWCzZyfecbDQ"
+        },
+        "attrs": {
+            "sub": "boG8dfc5MKTn37o7gsdCeyqL8LpWQtgoO41m1KZwdq0",
+            "name": "Default Admin User",
+            "email": {
+                "domain": "admin-ui-test.gluu.org",
+                "id": "admin"
+            },
+            "aud": "33d8c020-5c91-4fa6-8041-484eaae39926",
+            "phone_number": "+917837679340",
+            "iss": {
+                "__entity": {
+                    "type": "Jans::TrustedIssuer",
+                    "id": "https://admin-ui-test.gluu.org"
+                }
+            },
+            "jti": "SUgei1CKQjiWCzZyfecbDQ",
+            "birthdate": "2000-01-01"
+        },
+        "parents": []
+    }
+]

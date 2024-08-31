@@ -2,7 +2,7 @@ use authz::{jwt, Authz, AuthzConfig};
 use simplelog::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-	let _ = SimpleLogger::init(LevelFilter::Info, Config::default());
+	let _ = SimpleLogger::init(LevelFilter::Debug, Config::default());
 
 	if let Result::Err(err) = real_demo_case() {
 		println!("got error in demo case: {}", err);

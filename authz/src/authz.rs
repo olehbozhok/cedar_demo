@@ -125,6 +125,8 @@ impl Authz {
 		let context = Context::from_json_value(params.context, Some((&self.schema, &action)))
 			.map_err(HandleError::Context)?;
 
+		log::debug!("create cedar-policy request principal: {principal} action: {action} resource: {resource}");
+
 		let request: Request = Request::new(
 			Some(principal),
 			Some(action),
