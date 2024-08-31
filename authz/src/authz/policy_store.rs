@@ -45,7 +45,6 @@ where
 		})?;
 
 	for warning in warnings {
-		// let msg = format!("Schema Parser generated warning: {:?}", warning);
 		log::warn!("Schema Parser generated warning: {:?}", warning);
 	}
 
@@ -88,8 +87,10 @@ where
 	Ok(cedar_policy::PolicySet::from_policies(policies).unwrap())
 }
 
+#[allow(dead_code)]
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+
 pub struct TrustedIssuer {
 	pub name: Option<String>,
 	pub openid_configuration_endpoint: String,
@@ -99,12 +100,14 @@ pub struct TrustedIssuer {
 	pub userinfo_tokens: UserInfoTokenConfig,
 }
 
+#[allow(dead_code)]
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AccessTokenConfig {
 	pub trusted: bool,
 }
 
+#[allow(dead_code)]
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IdTokenConfig {
@@ -112,6 +115,7 @@ pub struct IdTokenConfig {
 	pub principal_identifier: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UserInfoTokenConfig {

@@ -73,4 +73,17 @@ namespace Jans {
         phone_number: String,
         sub: String,
     };
+
+    // ******  Actions  ******
+    action Execute appliesTo {
+        principal: [User, Role],
+        resource: Application,
+        context: Context,
+    };
 }
+
+action Execute appliesTo {
+        principal: Jans::User,
+        resource: Jans::Application,
+        context: Jans::Context,
+};

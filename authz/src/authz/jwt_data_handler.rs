@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
+use std::str::FromStr;
 
-use cedar_policy::Entity;
-use cedar_policy::EntityUid;
+use cedar_policy::{Entity, EntityId, EntityTypeName, EntityUid, ParseErrors};
 
 use super::jwt_tokens::{AccessToken, EntityCreatingError, IdToken, UserInfoToken, UserMissedInfo};
 
@@ -27,8 +27,24 @@ impl AuthzInputRaw {
 pub struct CedarParams {
 	// extra parameters for cedar decision resolution
 	pub action: String,
-	pub resource: serde_json::Value,
+	pub resource: ResourceData,
 	pub context: serde_json::Value,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct ResourceData {
+	#[serde(rename = "type")]
+	pub _type: String,
+	pub id: String,
+}
+
+impl ResourceData {
+	pub(crate) fn entity_uid(&self) -> Result<EntityUid, ParseErrors> {
+		Ok(EntityUid::from_type_name_and_id(
+			EntityTypeName::from_str(&self._type)?,
+			EntityId::new(&self.id),
+		))
+	}
 }
 
 #[derive(thiserror::Error, Debug)]

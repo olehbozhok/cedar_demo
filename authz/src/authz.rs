@@ -89,7 +89,7 @@ pub enum HandleError {
 	#[error("could not parse action: {0}")]
 	Action(ParseErrors),
 	#[error("could not parse resource from json: {0}")]
-	Resource(String),
+	Resource(cedar_policy::ParseErrors),
 	#[error("could not get entities from input: {0}")]
 	AuthzInputEntities(#[from] AuthzInputEntitiesError),
 	#[error("could not add entities values to entities list: {0}")]
@@ -112,19 +112,27 @@ impl Authz {
 		let decoded_input = input.decode_tokens(&self.jwt_dec)?;
 		let params = decoded_input.chedar_params;
 		let action = EntityUid::from_str(params.action.as_str()).map_err(HandleError::Action)?;
-		let resource = EntityUid::from_json(params.resource)
-			.map_err(|err| HandleError::Resource(err.to_string()))?;
+
+		let resource = params
+			.resource
+			.entity_uid()
+			.map_err(HandleError::Resource)?;
 
 		let entities_box = self.get_entities(decoded_input.jwt)?;
 
 		let principal = entities_box.user_entity_uid;
 
-		let context =
-			Context::from_json_value(params.context, None).map_err(HandleError::Context)?;
+		let context = Context::from_json_value(params.context, Some((&self.schema, &action)))
+			.map_err(HandleError::Context)?;
 
-		let request: Request =
-			Request::new(Some(principal), Some(action), Some(resource), context, None)
-				.map_err(|err| HandleError::Request(err.to_string()))?;
+		let request: Request = Request::new(
+			Some(principal),
+			Some(action),
+			Some(resource),
+			context,
+			Some(&self.schema),
+		)
+		.map_err(|err| HandleError::Request(err.to_string()))?;
 
 		let authorizer = Authorizer::new();
 		let decision = authorizer.is_authorized(&request, &self.policy, &entities_box.entities);
