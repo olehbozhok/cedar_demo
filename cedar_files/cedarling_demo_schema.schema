@@ -81,9 +81,3 @@ namespace Jans {
         context: Context,
     };
 }
-
-action Execute appliesTo {
-        principal: Jans::User,
-        resource: Jans::Application,
-        context: Jans::Context,
-};
